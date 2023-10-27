@@ -26,5 +26,5 @@ export class ProductoEntity {
   stock: number;
 
   @Column({ default: true })
-  active: boolean;
+  active?: boolean;
 }

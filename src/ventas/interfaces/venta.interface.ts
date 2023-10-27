@@ -7,10 +7,10 @@ export interface VentaInterface {
   precioCompra: number;
   descuento: string;
 }
-export interface ProductosVentaInterface {
+
+export interface ProductoInterface {
   id: string;
   clave: string;
-  cantidadProducto: number;
 }
 
 // ? ------------------------- REPONSE CONSULTATIONS INTERFACE ------------------------------//

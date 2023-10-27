@@ -1,12 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
-import { ProductoEntity } from './entities/producto.entity';
+import { ProductoEntity } from 'src/_common/entities/producto.entity';
 import { FindProductoDto } from './dto/find-productos.dto';
 import { v4 as uuidv4 } from 'uuid';
 
-import { Repository, Between, IsNull, DataSource, ILike } from 'typeorm';
+import { Repository, Between, DataSource, ILike } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
+import { ProductoInterface } from 'src/ventas/interfaces/venta.interface';
 
 @Injectable()
 export class ProductosService {
@@ -22,71 +23,53 @@ export class ProductosService {
   createUUID() {
     return uuidv4();
   }
-  // async create(createProductoDto: CreateProductoDto) {
-  //   const queryRunner = this.dataSource.createQueryRunner();
-  //   await queryRunner.connect();
-  //   await queryRunner.startTransaction();
+  async create(createProductoDto: CreateProductoDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      // ? ------------------------- Start Transaction ------------------------------//
+      const producto: ProductoInterface = await this.productoRepository.findOne(
+        {
+          where: { clave: createProductoDto.clave },
+        },
+      );
+      if (producto != null) {
+        throw new Error(
+          'Ya existe un producto con la clave: ' + createProductoDto.clave,
+        );
+      } else {
+        const generatedId = this.createUUID();
+        const objToSave: ProductoEntity = {
+          id: generatedId,
+          clave: createProductoDto.clave,
+          name: createProductoDto.name,
+          description: createProductoDto.description,
+          salePrice: createProductoDto.salePrice,
+          purchaseCost: createProductoDto.purchaseCost,
+          stock: createProductoDto.stock,
+        };
 
-  //   const generatedId = this.createUUID();
-  //   const producto: any = await this.productoRepository.findOne({
-  //     where: {
-  //       id: createProductoDto.sickId,
-  //       active: true,
-  //     },
-  //     relations: {
-  //       userEntity: true,
-  //     },
-  //   });
-  //   const generatedId = this.createUUID();
-  //   const supportEquipmentToInsert: SupportEquipmentEntity = Object.assign(
-  //     {},
-  //     supportEquipmentDto,
-  //     {
-  //       id: generatedId,
-  //       createdAt: new Date().toISOString(),
-  //       sickId: sick.id,
-  //       oldId: sick.oldId,
-  //       registeredInSINBA: sick.registeredInSINBA,
-  //       registerAt: new Date().toISOString(),
-  //       jurisdiction: sick.jurisdiction,
-  //       tablet: sick.tablet,
-  //       userEntity: await this.userRepository.findOne({
-  //         where: { id: sick.userEntity.id },
-  //       }),
-  //       sickEntity: await this.sickRepository.findOne({
-  //         where: { id: supportEquipmentDto.sickId },
-  //       }),
-  //       updatedAt: new Date().toISOString(),
-  //       updated: true,
-  //     },
-  //   );
-
-  //   // ? ------------------------- Transaction Complete ------------------------------//
-  //   await queryRunner.manager.save(
-  //     SupportEquipmentEntity,
-  //     supportEquipmentToInsert,
-  //   );
-  //   await queryRunner.commitTransaction();
-  //   // ? ------------------------- DELETE Dto ------------------------------//
-  //   delete supportEquipmentDto.wheelchair;
-  //   delete supportEquipmentDto.walker;
-  //   delete supportEquipmentDto.supportCane;
-  //   delete supportEquipmentDto.cane4Supports;
-  //   delete supportEquipmentDto.motive;
-  //   delete supportEquipmentDto.request;
-  //   delete supportEquipmentDto.INESick;
-  //   delete supportEquipmentDto.CURPSick;
-  //   delete supportEquipmentDto.medicalCertificate;
-  //   delete supportEquipmentDto.addressProof;
-  //   delete supportEquipmentDto.safeguarding;
-  //   // ? ------------------------- Return Object ------------------------------//
-  //   return this.responseService.succesMessage(
-  //     { generatedId },
-  //     'Registro creado correctamente',
-  //   );
-
-  //   // return 'This action adds a new producto';
-  // }
+        // ? ------------------------- Transaction Complete ------------------------------//
+        await queryRunner.manager.save(ProductoEntity, objToSave);
+        await queryRunner.commitTransaction();
+        // ? ------------------------- DELETE Dto ------------------------------//
+        delete createProductoDto.clave;
+        delete createProductoDto.name;
+        delete createProductoDto.description;
+        delete createProductoDto.salePrice;
+        delete createProductoDto.purchaseCost;
+        delete createProductoDto.stock;
+      }
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      if (error.message.startsWith('Ya existe un producto con la clave: ')) {
+        return this.responseService.errorMessage(error.message);
+      }
+    } finally {
+      await queryRunner.release();
+    }
+  }
 
   findAll() {
     return `This action returns all productos`;

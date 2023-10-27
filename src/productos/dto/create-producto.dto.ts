@@ -21,4 +21,7 @@ export class CreateProductoDto {
   @ApiProperty()
   @IsInt()
   stock: number;
+
+  @ApiProperty()
+  clave: string;
 }
