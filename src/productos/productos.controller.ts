@@ -10,18 +10,19 @@ import {
 import { ProductosService } from './productos.service';
 // import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { globalResponse } from 'src/_common/response.service';
 import { FindProductoDto } from './dto/find-productos.dto';
-
+import { CreateProductoDto } from './dto/create-producto.dto';
+@ApiTags('productos')
 @Controller('productos')
 export class ProductosController {
   constructor(private readonly productosService: ProductosService) {}
 
-  // @Post()
-  // create(@Body() createProductoDto: CreateProductoDto) {
-  //   return this.productosService.create(createProductoDto);
-  // }
+  @Post()
+  create(@Body() createProductoDto: CreateProductoDto) {
+    return this.productosService.create(createProductoDto);
+  }
 
   @Get()
   findAll() {
