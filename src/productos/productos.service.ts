@@ -7,7 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { Repository, Between, DataSource, ILike } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
-import { ProductoInterface } from 'src/ventas/interfaces/venta.interface';
+import {
+  ProductoInterface,
+  ResponseproductoInterface,
+} from './interfaces/productos.interface';
+import { ProductoVentaInterface } from 'src/ventas/interfaces/venta.interface';
 
 @Injectable()
 export class ProductosService {
@@ -29,11 +33,10 @@ export class ProductosService {
     await queryRunner.startTransaction();
     try {
       // ? ------------------------- Start Transaction ------------------------------//
-      const producto: ProductoInterface = await this.productoRepository.findOne(
-        {
+      const producto: ProductoVentaInterface =
+        await this.productoRepository.findOne({
           where: { clave: createProductoDto.clave },
-        },
-      );
+        });
       if (producto != null) {
         throw new Error(
           'Ya existe un producto con la clave: ' + createProductoDto.clave,
@@ -70,23 +73,60 @@ export class ProductosService {
       await queryRunner.release();
     }
   }
-
-  findAll() {
-    return `This action returns all productos`;
+  async findAll() {
+    try {
+      const producto = await this.productoRepository.find({
+        where: { active: true },
+      });
+      return this.responseService.succesMessage(
+        producto,
+        'Productos Encontrados',
+      );
+    } catch (e) {
+      console.log(e);
+    } finally {
+      console.log('Encontre productos');
+    }
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} producto`;
+  async findOne(id: string): Promise<ResponseproductoInterface> {
+    try {
+      const producto = await this.productoRepository.findOne({
+        where: { id: id, active: true },
+      });
+      if (!producto) {
+        return this.responseService.errorMessage(
+          'No se encontro el registro con el id: ' + id,
+        );
+      }
+      const dataProducto: ProductoInterface = {
+        id: producto.id,
+        name: producto.name,
+        clave: producto.clave,
+        description: producto.description,
+        salePrice: producto.salePrice,
+        purcharseCost: producto.purchaseCost,
+        stock: producto.stock,
+        active: producto.active,
+      };
+      return this.responseService.succesMessage(
+        dataProducto,
+        'Producto Encontrado',
+      );
+    } catch (e) {
+      if (e.code == '22P02') {
+        return this.responseService.errorMessage(
+          'El id no corresponde al fomarto UUID',
+        );
+      } else {
+        console.log(e);
+      }
+    } finally {
+      console.log('Encontre productos');
+    }
   }
-
-  update(id: number, updateProductoDto: UpdateProductoDto) {
-    return `This action updates a #${id} producto`;
-  }
-
   remove(id: number) {
     return `This action removes a #${id} producto`;
   }
-
   async findAllProductos(findProductoDto: FindProductoDto) {
     try {
       const page =
@@ -176,7 +216,10 @@ export class ProductosService {
     } catch (e) {
       console.log(e);
     } finally {
-      console.log('Encontre consultas');
+      console.log('Encontre productos');
     }
+  }
+  update(id: number, updateProductoDto: UpdateProductoDto) {
+    return `This action updates a #${id} producto`;
   }
 }

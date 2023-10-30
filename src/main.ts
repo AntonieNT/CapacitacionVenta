@@ -14,7 +14,7 @@ async function bootstrap() {
     .setTitle('API Ventas')
     .setDescription('Administracion ventas')
     .setVersion('1.0')
-    .addTag('End Points')
+    // .addTag('End Points')
     .build();
   const document = SwaggerModule.createDocument(app, config);
 

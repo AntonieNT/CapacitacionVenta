@@ -8,7 +8,7 @@ export interface VentaInterface {
   descuento: string;
 }
 
-export interface ProductoInterface {
+export interface ProductoVentaInterface {
   id: string;
   clave: string;
 }

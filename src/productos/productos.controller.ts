@@ -24,14 +24,33 @@ export class ProductosController {
     return this.productosService.create(createProductoDto);
   }
 
+  // ? ------------------------- FIND ALL PRODUCTS ------------------------------//
+  @ApiOperation({
+    summary: 'Return all productos',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Return productos',
+    isArray: false,
+    type: globalResponse,
+  })
   @Get()
   findAll() {
     return this.productosService.findAll();
   }
-
+  // ? ------------------------- FIND ONE PRODUCT ------------------------------//
+  @ApiOperation({
+    summary: 'Return producto',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Return producto',
+    isArray: false,
+    type: globalResponse,
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.productosService.findOne(+id);
+    return this.productosService.findOne(id);
   }
 
   @Patch(':id')
