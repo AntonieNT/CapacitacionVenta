@@ -1,16 +1,21 @@
-// ? ------------------------- INTERFACE VENTA ------------------------------//
 export interface ProductoInterface {
   id: string;
   name: string;
   clave: string;
   description: string;
   salePrice: number;
-  purcharseCost: number;
+  purchaseCost: number;
   stock: number;
   active: boolean;
 }
-
-// ? ------------------------- REPONSE CONSULTATIONS INTERFACE ------------------------------//
+export interface FindOneProductoInterface {
+  id: string;
+  clave: string;
+}
+export interface DeleteProductoInterface {
+  id: string;
+  active: boolean;
+}
 export interface ResponseproductoInterface {
   code: number;
   message: string;

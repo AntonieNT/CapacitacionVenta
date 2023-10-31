@@ -43,13 +43,13 @@ export class FindProductoDto {
   @Max(2)
   orderName: number;
 
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @IsNumber()
-  page: number;
-
   @ApiPropertyOptional({ example: 50 })
   @IsOptional()
   @IsNumber()
   take: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsNumber()
+  page: number;
 }

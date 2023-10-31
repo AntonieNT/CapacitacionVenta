@@ -63,7 +63,7 @@ export class ProductosController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.productosService.remove(+id);
+    return this.productosService.remove(id);
   }
 
   // ? ------------------------- FIND ALL CONSULTATIONS ------------------------------//

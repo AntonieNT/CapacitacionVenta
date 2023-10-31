@@ -8,10 +8,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Repository, Between, DataSource, ILike } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
 import {
+  DeleteProductoInterface,
+  FindOneProductoInterface,
   ProductoInterface,
   ResponseproductoInterface,
 } from './interfaces/productos.interface';
-import { ProductoVentaInterface } from 'src/ventas/interfaces/venta.interface';
 
 @Injectable()
 export class ProductosService {
@@ -33,13 +34,14 @@ export class ProductosService {
     await queryRunner.startTransaction();
     try {
       // ? ------------------------- Start Transaction ------------------------------//
-      const producto: ProductoVentaInterface =
+      const producto: FindOneProductoInterface =
         await this.productoRepository.findOne({
           where: { clave: createProductoDto.clave },
         });
+      console.log(producto);
       if (producto != null) {
         throw new Error(
-          'Ya existe un producto con la clave: ' + createProductoDto.clave,
+          'Ya existe un producto con la clave: ' + producto.clave,
         );
       } else {
         const generatedId = this.createUUID();
@@ -51,6 +53,7 @@ export class ProductosService {
           salePrice: createProductoDto.salePrice,
           purchaseCost: createProductoDto.purchaseCost,
           stock: createProductoDto.stock,
+          active: true,
         };
 
         // ? ------------------------- Transaction Complete ------------------------------//
@@ -63,6 +66,10 @@ export class ProductosService {
         delete createProductoDto.salePrice;
         delete createProductoDto.purchaseCost;
         delete createProductoDto.stock;
+
+        return this.responseService.succesInfo(
+          'Se registro el producto con id: ' + generatedId,
+        );
       }
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -104,7 +111,7 @@ export class ProductosService {
         clave: producto.clave,
         description: producto.description,
         salePrice: producto.salePrice,
-        purcharseCost: producto.purchaseCost,
+        purchaseCost: producto.purchaseCost,
         stock: producto.stock,
         active: producto.active,
       };
@@ -124,8 +131,36 @@ export class ProductosService {
       console.log('Encontre productos');
     }
   }
-  remove(id: number) {
-    return `This action removes a #${id} producto`;
+  async remove(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      // ? ------------------------- Start Transaction ------------------------------//
+      const producto: DeleteProductoInterface =
+        await this.productoRepository.findOne({
+          where: { id: id, active: true },
+        });
+      if (producto != null) {
+        producto.active = false;
+      } else {
+        return this.responseService.succesInfo(
+          'No existe el registro con el id: ' + id,
+        );
+      }
+      // ? ------------------------- Transaction Complete ------------------------------//
+      await queryRunner.manager.save(producto);
+      await queryRunner.commitTransaction();
+      // ? ------------------------- Return Object ------------------------------//
+      return this.responseService.succesInfo(
+        'Se ha eliminado el producto con ID' + id,
+      );
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.log('error', error);
+    } finally {
+      await queryRunner.release();
+    }
   }
   async findAllProductos(findProductoDto: FindProductoDto) {
     try {
@@ -133,81 +168,51 @@ export class ProductosService {
         findProductoDto.hasOwnProperty('page') == true
           ? findProductoDto.page
           : null;
-
       const take =
         findProductoDto.hasOwnProperty('take') == true
           ? findProductoDto.take
           : null;
-
       const skip =
         page != null && page != undefined
           ? take != null && take != undefined
             ? (page - 1) * take
             : null
           : null;
-
       const where: { name?: any; salePrice?: any; clave?: any } = {};
-
-      function addNameW(name: any) {
-        where.name = name;
-      }
-
-      function addSalePriceW(salePrice: any) {
-        where.salePrice = salePrice;
-      }
-
-      function addClaveW(clave: any) {
-        where.clave = clave;
-      }
-
       const order: { name?: any; salePrice?: any } = {};
-
-      function addNameO(name: any) {
-        order.name = name;
-      }
-
-      function addSalePriceO(salePrice: any) {
-        order.name = salePrice;
-      }
-
       function ejecutarTernarias() {
         findProductoDto.hasOwnProperty('name') == true
-          ? addNameW(ILike(`%${findProductoDto.name}%`))
+          ? (where.name = ILike(`%${findProductoDto.name}%`))
           : null;
         findProductoDto.hasOwnProperty('clave') == true
-          ? addClaveW(ILike(`%${findProductoDto.clave}%`))
+          ? (where.clave = ILike(`%${findProductoDto.clave}%`))
           : null;
         findProductoDto.hasOwnProperty('firstCost') == true
           ? findProductoDto.hasOwnProperty('endCost') == true
-            ? addSalePriceW(
-                Between(findProductoDto.firstCost, findProductoDto.endCost),
-              )
+            ? (where.salePrice = Between(
+                findProductoDto.firstCost,
+                findProductoDto.endCost,
+              ))
             : null
           : null;
         findProductoDto.orderSalePrice == 1
-          ? addSalePriceO('DESC')
+          ? (order.name = 'DESC')
           : findProductoDto.orderSalePrice == 2
-          ? addSalePriceO('ASC')
+          ? (order.name = 'ASC')
           : null;
         findProductoDto.orderName == 1
-          ? addNameO('DESC')
+          ? (order.name = 'DESC')
           : findProductoDto.orderName == 2
-          ? addNameO('ASC')
+          ? (order.name = 'ASC')
           : null;
       }
-
       ejecutarTernarias();
-
-      console.log(order);
-      console.log(where);
-
       const [data, total] = await this.productoRepository.findAndCount({
         skip,
         take,
         where: where,
         order: order,
       });
-
       const entity = { data, total, page };
       return this.responseService.succesMessage(
         entity,

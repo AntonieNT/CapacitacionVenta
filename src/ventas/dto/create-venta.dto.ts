@@ -1,18 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsInt, ValidateNested } from 'class-validator';
+import { IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ProductosVentaClass {
   id: string;
   clave?: string;
   cantidadProducto: number;
+  descuento: number;
 }
 
 export class CreateVentaDto {
-  @ApiProperty()
-  @IsInt()
-  descuento: number;
-
   @ApiProperty({
     isArray: true,
     example: [
@@ -20,6 +17,7 @@ export class CreateVentaDto {
         id: 'string',
         clave: '?' + 'string',
         cantidadProducto: 'number',
+        descuento: 'number',
       },
     ],
   })

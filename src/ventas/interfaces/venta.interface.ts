@@ -1,4 +1,3 @@
-// ? ------------------------- INTERFACE VENTA ------------------------------//
 export interface VentaInterface {
   descriptionProducto: string;
   cantidadProducto: boolean;
@@ -7,12 +6,10 @@ export interface VentaInterface {
   precioCompra: number;
   descuento: string;
 }
-
-export interface ProductoVentaInterface {
+export interface FindOneVentaInterface {
   id: string;
-  clave: string;
+  active: boolean;
 }
-
 // ? ------------------------- REPONSE CONSULTATIONS INTERFACE ------------------------------//
 export interface ResponseVentaInterface {
   code: number;

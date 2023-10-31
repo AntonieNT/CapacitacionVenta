@@ -23,5 +23,6 @@ export class CreateProductoDto {
   stock: number;
 
   @ApiProperty()
+  @IsString()
   clave: string;
 }
