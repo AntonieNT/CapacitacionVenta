@@ -1,11 +1,13 @@
 export interface VentaInterface {
   descriptionProducto: string;
-  cantidadProducto: boolean;
+  cantidadProducto: number;
   precioVenta: number;
   totalVenta: number;
   precioCompra: number;
+  porcentajeUtilidad: number;
   descuento: string;
 }
+
 export interface FindOneVentaInterface {
   id: string;
   active: boolean;

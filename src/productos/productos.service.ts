@@ -196,9 +196,9 @@ export class ProductosService {
             : null
           : null;
         findProductoDto.orderSalePrice == 1
-          ? (order.name = 'DESC')
+          ? (order.salePrice = 'DESC')
           : findProductoDto.orderSalePrice == 2
-          ? (order.name = 'ASC')
+          ? (order.salePrice = 'ASC')
           : null;
         findProductoDto.orderName == 1
           ? (order.name = 'DESC')

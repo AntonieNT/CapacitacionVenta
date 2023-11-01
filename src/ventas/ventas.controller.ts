@@ -21,23 +21,23 @@ export class VentasController {
     return this.ventasService.create(createVentaDto);
   }
 
-  @Get()
-  findAll() {
-    return this.ventasService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.ventasService.findAll();
+  // }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ventasService.findOne(+id);
-  }
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.ventasService.findOne(+id);
+  // }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVentaDto: UpdateVentaDto) {
-    return this.ventasService.update(+id, updateVentaDto);
-  }
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() updateVentaDto: UpdateVentaDto) {
+  //   return this.ventasService.update(+id, updateVentaDto);
+  // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ventasService.remove(+id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.ventasService.remove(+id);
+  // }
 }

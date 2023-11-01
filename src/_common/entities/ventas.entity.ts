@@ -1,23 +1,20 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
 @Entity({ name: 'Venta' })
 export class VentaEntity {
   @PrimaryColumn({ type: 'uuid' })
   id: string;
 
   @Column()
+  cantidadProductos: number;
+
+  @CreateDateColumn()
+  dateVenta: Date;
+
+  @Column()
   ventaTotal: number;
 
   @Column()
-  descuento: number;
-
-  @Column()
-  porcentajeUtilidad: string;
-
-  @Column()
-  dateVenta: Date;
-
-  @Column({ default: true })
-  active: boolean;
+  productosVendidos: string;
 
   @Column()
   productosVenta: string;
