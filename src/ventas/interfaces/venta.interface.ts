@@ -5,7 +5,7 @@ export interface VentaInterface {
   totalVenta: number;
   precioCompra: number;
   porcentajeUtilidad: number;
-  descuento: string;
+  descuento: number;
 }
 
 export interface FindOneVentaInterface {

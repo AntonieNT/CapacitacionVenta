@@ -8,14 +8,11 @@ export class VentaEntity {
   cantidadProductos: number;
 
   @CreateDateColumn()
-  dateVenta: Date;
+  dateVenta?: Date;
 
   @Column()
   ventaTotal: number;
 
   @Column()
   productosVendidos: string;
-
-  @Column()
-  productosVenta: string;
 }

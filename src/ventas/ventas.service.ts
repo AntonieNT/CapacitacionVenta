@@ -7,10 +7,7 @@ import { Repository, Between, DataSource, ILike, Index } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
 import { ProductoEntity } from 'src/_common/entities/producto.entity';
 import { ProductoInterface } from 'src/productos/interfaces/productos.interface';
-import {
-  ProductoVentaInterface,
-  VentaInterface,
-} from 'src/ventas/interfaces/venta.interface';
+import { VentaInterface } from 'src/ventas/interfaces/venta.interface';
 
 @Injectable()
 export class VentasService {
@@ -36,44 +33,51 @@ export class VentasService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const productos: { producto: any } = {};
-
-      for (
-        let index = 0;
-        index < createVentaDto.productosVenta.length;
-        index++
-      ) {
+      const productos: any[] = [];
+      const cantidadProductos = createVentaDto.productosVenta.length;
+      let totalVentaProductos = 0;
+      for (let index = 0; index < cantidadProductos; index++) {
         const producto: ProductoInterface =
           await this.productoRepository.findOne({
             where: { clave: createVentaDto.productosVenta[index].clave },
           });
         if (producto != null) {
-          console.log(producto);
-
+          const stock = producto.stock;
           const cantidad =
             createVentaDto.productosVenta[index].cantidadProducto;
-
-          const precioCompra = producto.purchaseCost;
-
-          const descuento = createVentaDto.productosVenta[index].descuento;
-
-          const descuentoAplicado= 
-
-          const precioVenta = producto.salePrice;
-
-          const totalVenta = cantidad * precioVenta;
-
-          const dataProducto: VentaInterface = {
-            descriptionProducto: producto.description,
-            cantidadProducto: cantidad,
-            precioVenta: precioVenta,
-            totalVenta: totalVenta,
-            precioCompra: precioCompra,
-            porcentajeUtilidad: number,
-            descuento: string,
-          };
-
-          productos.producto = dataProducto;
+          if (cantidad > stock) {
+            throw new Error(
+              'No se puede realizar la venta del producto: ' +
+                createVentaDto.productosVenta[index].clave +
+                ' ya que tiene stock de: ' +
+                stock,
+            );
+          } else {
+            const precioCompra = producto.purchaseCost;
+            const descuento = createVentaDto.productosVenta[index].descuento;
+            const precioVenta = producto.salePrice;
+            const descuentoAplicado = (descuento / 100) * precioVenta;
+            const precioConDescuento = precioVenta - descuentoAplicado;
+            const totalVentaSinDescuento = precioVenta * cantidad;
+            const totalVentaConDescuento = precioConDescuento * cantidad;
+            const diferenciaVentas =
+              totalVentaSinDescuento - totalVentaConDescuento;
+            const porcentajeUtilidad =
+              (diferenciaVentas / totalVentaSinDescuento) * 100;
+            totalVentaProductos = totalVentaProductos + totalVentaConDescuento;
+            const dataProducto: VentaInterface = {
+              descriptionProducto: producto.description,
+              cantidadProducto: cantidad,
+              precioVenta: precioVenta,
+              totalVenta: totalVentaConDescuento,
+              precioCompra: precioCompra,
+              porcentajeUtilidad: porcentajeUtilidad,
+              descuento: descuento,
+            };
+            productos[index] = dataProducto;
+            producto.stock = stock - cantidad;
+            await this.productoRepository.save(producto);
+          }
         } else {
           throw new Error(
             'No existe un producto con la clave: ' +
@@ -81,48 +85,44 @@ export class VentasService {
           );
         }
       }
-
-      // const producto: ProductoVentaInterface =
-      //   await this.ventaRepository.findOne({
-      //     where: { id: createVentaDto.id },
-      //   });
-      // console.log(producto);
-      // if (producto != null) {
-      //   throw new Error(
-      //     'Ya existe un producto con la clave: ' + producto.clave,
-      //   );
-      // } else {
-      //   const generatedId = this.createUUID();
-      //   const objToSave: ProductoEntity = {
-      //     id: generatedId,
-      //     clave: createProductoDto.clave,
-      //     name: createProductoDto.name,
-      //     description: createProductoDto.description,
-      //     salePrice: createProductoDto.salePrice,
-      //     purchaseCost: createProductoDto.purchaseCost,
-      //     stock: createProductoDto.stock,
-      //     active: true,
-      //   };
-
-      //   // ? ------------------------- Transaction Complete ------------------------------//
-      //   await queryRunner.manager.save(ProductoEntity, objToSave);
-      //   await queryRunner.commitTransaction();
-      //   // ? ------------------------- DELETE Dto ------------------------------//
-      //   delete createProductoDto.clave;
-      //   delete createProductoDto.name;
-      //   delete createProductoDto.description;
-      //   delete createProductoDto.salePrice;
-      //   delete createProductoDto.purchaseCost;
-      //   delete createProductoDto.stock;
-
-      //   return this.responseService.succesInfo(
-      //     'Se registro el producto con id: ' + generatedId,
-      //   );
-      // }
+      const cadenaJSON = JSON.stringify(productos);
+      const generatedId = this.createUUID();
+      const ventaToInsert: VentaEntity = {
+        id: generatedId,
+        cantidadProductos: cantidadProductos,
+        ventaTotal: totalVentaProductos,
+        productosVendidos: cadenaJSON,
+      };
+      // ? ------------------------- Transaction Complete ------------------------------//
+      await queryRunner.manager.save(VentaEntity, ventaToInsert);
+      await queryRunner.commitTransaction();
+      // ? ------------------------- DELETE Dto ------------------------------//
+      delete createVentaDto.productosVenta;
+      // ? ------------------------- Return Object ------------------------------//
+      return this.responseService.succesMessage(
+        { generatedId },
+        'Venta realizada correctamente',
+      );
     } catch (error) {
       await queryRunner.rollbackTransaction();
       if (error.message.startsWith('No existe un producto con la clave: ')) {
         return this.responseService.errorMessage(error.message);
+      } else {
+        if (
+          error.message.startsWith(
+            'No se puede realizar la venta del producto: ',
+          )
+        ) {
+          return this.responseService.errorMessage(error.message);
+        } else {
+          if (error.code == '22P02') {
+            return this.responseService.errorMessage(
+              'El id no corresponde al fomarto UUID',
+            );
+          } else {
+            console.log(error);
+          }
+        }
       }
     } finally {
       await queryRunner.release();
