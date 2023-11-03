@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
   IsNumber,
@@ -10,8 +10,7 @@ import { Type } from 'class-transformer';
 
 export class ProductosVentaClass {
   @IsString()
-  @IsOptional()
-  clave?: string;
+  clave: string;
 
   @IsNumber()
   cantidadProducto: number;

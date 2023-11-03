@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { CreateVentaDto } from './dto/create-venta.dto';
+import { CreateVentaDto, ProductosVentaClass } from './dto/create-venta.dto';
 import { VentaEntity } from 'src/_common/entities/ventas.entity';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,20 +26,65 @@ export class VentasService {
   createUUID() {
     return uuidv4();
   }
+
+  async findOne(id: string) {
+    try {
+      const venta = await this.ventaRepository.find({
+        where: { id: id },
+      });
+      return this.responseService.succesMessage(venta, 'Venta Encontrada');
+    } catch (e) {
+      console.log(e);
+    } finally {
+      console.log('Encontre ventas');
+    }
+  }
+
   async create(createVentaDto: CreateVentaDto) {
     // ? ------------------------- Start Transaction ------------------------------//
-
+    console.log(createVentaDto);
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
+      console.log(createVentaDto.productosVenta);
+      
+      function fusionarProductosDuplicados(
+        productos: ProductosVentaClass[],
+      ): ProductosVentaClass[] {
+        const resultado: ProductosVentaClass[] = [];
+        productos.forEach((producto) => {
+          const indiceExistente = resultado.findIndex(
+            (p) => p.clave === producto.clave,
+          );
+          if (indiceExistente !== -1) {
+            // Ya hay un producto con la misma clave, fusionarlos.
+            resultado[indiceExistente].cantidadProducto +=
+              producto.cantidadProducto;
+
+            if (producto.descuento !== undefined) {
+              // Solo actualizar el descuento si está presente en el producto actual.
+              resultado[indiceExistente].descuento = producto.descuento;
+            }
+          } else {
+            // No se encontró un producto con la misma clave, agregarlo tal cual.
+            resultado.push({ ...producto });
+          }
+        });
+        return resultado;
+      }
+      const productosFusionados = fusionarProductosDuplicados(
+        createVentaDto.productosVenta,
+      );
+      console.log(productosFusionados);
       const productos: any[] = [];
-      const cantidadProductos = createVentaDto.productosVenta.length;
+      const cantidadProductos = productosFusionados.length;
       let totalVentaProductos = 0;
+
       for (let index = 0; index < cantidadProductos; index++) {
         const producto: ProductoInterface =
           await this.productoRepository.findOne({
-            where: { clave: createVentaDto.productosVenta[index].clave },
+            where: { clave: productosFusionados[index].clave },
           });
         if (producto != null) {
           const stock = producto.stock;
@@ -54,7 +99,11 @@ export class VentasService {
             );
           } else {
             const precioCompra = producto.purchaseCost;
-            const descuento = createVentaDto.productosVenta[index].descuento;
+            let descuentoDTO = createVentaDto.productosVenta[index].descuento;
+            if (descuentoDTO == null || descuentoDTO == undefined) {
+              descuentoDTO = 0;
+            }
+            const descuento = descuentoDTO;
             const precioVenta = producto.salePrice;
             const descuentoAplicado = (descuento / 100) * precioVenta;
             const precioConDescuento = precioVenta - descuentoAplicado;
@@ -128,151 +177,4 @@ export class VentasService {
       await queryRunner.release();
     }
   }
-  // async findAll() {
-  //   try {
-  //     const producto = await this.productoRepository.find({
-  //       where: { active: true },
-  //     });
-  //     return this.responseService.succesMessage(
-  //       producto,
-  //       'Productos Encontrados',
-  //     );
-  //   } catch (e) {
-  //     console.log(e);
-  //   } finally {
-  //     console.log('Encontre productos');
-  //   }
-  // }
-  // async findOne(id: string): Promise<ResponseproductoInterface> {
-  //   try {
-  //     const producto = await this.productoRepository.findOne({
-  //       where: { id: id, active: true },
-  //     });
-  //     if (!producto) {
-  //       return this.responseService.errorMessage(
-  //         'No se encontro el registro con el id: ' + id,
-  //       );
-  //     }
-  //     const dataProducto: ProductoInterface = {
-  //       id: producto.id,
-  //       name: producto.name,
-  //       clave: producto.clave,
-  //       description: producto.description,
-  //       salePrice: producto.salePrice,
-  //       purcharseCost: producto.purchaseCost,
-  //       stock: producto.stock,
-  //       active: producto.active,
-  //     };
-  //     return this.responseService.succesMessage(
-  //       dataProducto,
-  //       'Producto Encontrado',
-  //     );
-  //   } catch (e) {
-  //     if (e.code == '22P02') {
-  //       return this.responseService.errorMessage(
-  //         'El id no corresponde al fomarto UUID',
-  //       );
-  //     } else {
-  //       console.log(e);
-  //     }
-  //   } finally {
-  //     console.log('Encontre productos');
-  //   }
-  // }
-  // async remove(id: string) {
-  //   const queryRunner = this.dataSource.createQueryRunner();
-  //   await queryRunner.connect();
-  //   await queryRunner.startTransaction();
-  //   try {
-  //     // ? ------------------------- Start Transaction ------------------------------//
-  //     const producto: DeleteProductoInterface =
-  //       await this.productoRepository.findOne({
-  //         where: { id: id, active: true },
-  //       });
-  //     if (producto != null) {
-  //       producto.active = false;
-  //     } else {
-  //       return this.responseService.succesInfo(
-  //         'No existe el registro con el id: ' + id,
-  //       );
-  //     }
-  //     // ? ------------------------- Transaction Complete ------------------------------//
-  //     await queryRunner.manager.save(producto);
-  //     await queryRunner.commitTransaction();
-  //     // ? ------------------------- Return Object ------------------------------//
-  //     return this.responseService.succesInfo(
-  //       'Se ha eliminado el producto con ID' + id,
-  //     );
-  //   } catch (error) {
-  //     await queryRunner.rollbackTransaction();
-  //     console.log('error', error);
-  //   } finally {
-  //     await queryRunner.release();
-  //   }
-  // }
-  // async findAllProductos(findProductoDto: FindProductoDto) {
-  //   try {
-  //     const page =
-  //       findProductoDto.hasOwnProperty('page') == true
-  //         ? findProductoDto.page
-  //         : null;
-  //     const take =
-  //       findProductoDto.hasOwnProperty('take') == true
-  //         ? findProductoDto.take
-  //         : null;
-  //     const skip =
-  //       page != null && page != undefined
-  //         ? take != null && take != undefined
-  //           ? (page - 1) * take
-  //           : null
-  //         : null;
-  //     const where: { name?: any; salePrice?: any; clave?: any } = {};
-  //     const order: { name?: any; salePrice?: any } = {};
-  //     function ejecutarTernarias() {
-  //       findProductoDto.hasOwnProperty('name') == true
-  //         ? (where.name = ILike(`%${findProductoDto.name}%`))
-  //         : null;
-  //       findProductoDto.hasOwnProperty('clave') == true
-  //         ? (where.clave = ILike(`%${findProductoDto.clave}%`))
-  //         : null;
-  //       findProductoDto.hasOwnProperty('firstCost') == true
-  //         ? findProductoDto.hasOwnProperty('endCost') == true
-  //           ? (where.salePrice = Between(
-  //               findProductoDto.firstCost,
-  //               findProductoDto.endCost,
-  //             ))
-  //           : null
-  //         : null;
-  //       findProductoDto.orderSalePrice == 1
-  //         ? (order.name = 'DESC')
-  //         : findProductoDto.orderSalePrice == 2
-  //         ? (order.name = 'ASC')
-  //         : null;
-  //       findProductoDto.orderName == 1
-  //         ? (order.name = 'DESC')
-  //         : findProductoDto.orderName == 2
-  //         ? (order.name = 'ASC')
-  //         : null;
-  //     }
-  //     ejecutarTernarias();
-  //     const [data, total] = await this.productoRepository.findAndCount({
-  //       skip,
-  //       take,
-  //       where: where,
-  //       order: order,
-  //     });
-  //     const entity = { data, total, page };
-  //     return this.responseService.succesMessage(
-  //       entity,
-  //       'Productos Encontrados',
-  //     );
-  //   } catch (e) {
-  //     console.log(e);
-  //   } finally {
-  //     console.log('Encontre productos');
-  //   }
-  // }
-  // update(id: number, updateProductoDto: UpdateProductoDto) {
-  //   return `This action updates a #${id} producto`;
-  // }
 }
