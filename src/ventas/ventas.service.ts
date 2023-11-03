@@ -48,23 +48,38 @@ export class VentasService {
     await queryRunner.startTransaction();
     try {
       console.log(createVentaDto.productosVenta);
-      
       function fusionarProductosDuplicados(
         productos: ProductosVentaClass[],
       ): ProductosVentaClass[] {
         const resultado: ProductosVentaClass[] = [];
+
         productos.forEach((producto) => {
           const indiceExistente = resultado.findIndex(
             (p) => p.clave === producto.clave,
           );
-          if (indiceExistente !== -1) {
-            // Ya hay un producto con la misma clave, fusionarlos.
-            resultado[indiceExistente].cantidadProducto +=
-              producto.cantidadProducto;
 
+          if (indiceExistente !== -1) {
+            // Ya hay un producto con la misma clave, comprobar si el descuento es diferente.
             if (producto.descuento !== undefined) {
-              // Solo actualizar el descuento si está presente en el producto actual.
-              resultado[indiceExistente].descuento = producto.descuento;
+              if (resultado[indiceExistente].descuento === undefined) {
+                // El producto existente no tiene descuento, asignar el nuevo descuento.
+                resultado[indiceExistente].descuento = producto.descuento;
+              } else if (
+                resultado[indiceExistente].descuento !== producto.descuento
+              ) {
+                // El descuento es diferente, no se puede fusionar, crear un nuevo objeto.
+                throw new Error(
+                  'No se puede realizar por que existen productos duplicados con diferente descuento: ' +
+                    { ...producto }.clave,
+                );
+                // resultado.push({ ...producto });
+              }
+              // Sumar la cantidad al producto existente.
+              resultado[indiceExistente].cantidadProducto +=
+                producto.cantidadProducto;
+            } else {
+              // El producto actual no tiene descuento, agregarlo sin fusionar.
+              resultado.push({ ...producto });
             }
           } else {
             // No se encontró un producto con la misma clave, agregarlo tal cual.
@@ -73,6 +88,7 @@ export class VentasService {
         });
         return resultado;
       }
+
       const productosFusionados = fusionarProductosDuplicados(
         createVentaDto.productosVenta,
       );
@@ -168,6 +184,13 @@ export class VentasService {
             return this.responseService.errorMessage(
               'El id no corresponde al fomarto UUID',
             );
+          }
+          if (
+            error.message.startsWith(
+              'No se puede realizar por que existen productos duplicados con diferente descuento: ',
+            )
+          ) {
+            return this.responseService.errorMessage(error.message);
           } else {
             console.log(error);
           }
