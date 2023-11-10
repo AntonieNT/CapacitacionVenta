@@ -8,7 +8,7 @@ import {
   Min,
 } from 'class-validator';
 
-export class FindProductoDto {
+export class FindproductDto {
   @ApiPropertyOptional({ example: 'coca' })
   @IsOptional()
   @IsString()
@@ -17,7 +17,7 @@ export class FindProductoDto {
   @ApiPropertyOptional({ example: 'coca' })
   @IsOptional()
   @IsString()
-  clave: string;
+  code: string;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()

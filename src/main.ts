@@ -11,8 +11,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const config = new DocumentBuilder()
-    .setTitle('API Ventas')
-    .setDescription('Administracion ventas')
+    .setTitle('API sales')
+    .setDescription('Administracion sales')
     .setVersion('1.0')
     // .addTag('End Points')
     .build();

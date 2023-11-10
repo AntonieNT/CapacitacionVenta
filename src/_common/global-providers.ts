@@ -1,17 +1,17 @@
 import { DataSource } from 'typeorm';
-import { ProductoEntity } from './entities/producto.entity';
-import { VentaEntity } from './entities/ventas.entity';
+import { ProductEntity } from './entities/product.entity';
+import { SalesEntity } from './entities/sales.entity';
 export const globalProviders = [
   {
-    provide: 'PRODUCTO_REPOSITORY',
+    provide: 'product_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
-      dataSource.getRepository(ProductoEntity),
+      dataSource.getRepository(ProductEntity),
     inject: ['DATA_SOURCE'],
   },
   {
     provide: 'VENTA_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
-      dataSource.getRepository(VentaEntity),
+      dataSource.getRepository(SalesEntity),
     inject: ['DATA_SOURCE'],
   },
 ];

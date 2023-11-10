@@ -8,16 +8,16 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class ProductosVentaClass {
+export class ProductsSaleClass {
   @IsString()
-  clave: string;
+  code: string;
 
   @IsNumber()
-  cantidadProducto: number;
+  productQuantity: number;
 
   @IsNumber()
   @IsOptional()
-  descuento?: number;
+  discount?: number;
 }
 
 export class CreateVentaDto {
@@ -25,14 +25,14 @@ export class CreateVentaDto {
     isArray: true,
     example: [
       {
-        clave: 'string',
-        cantidadProducto: 'number',
-        descuento: 'number',
+        code: 'string',
+        productQuantity: 'number',
+        discount: 'number',
       },
     ],
   })
-  @IsArray({ message: 'Debe de ser un array de productos' })
+  @IsArray({ message: 'Debe de ser un array de products' })
   @ValidateNested({ each: true })
-  @Type(() => ProductosVentaClass)
-  productosVenta: ProductosVentaClass[];
+  @Type(() => ProductsSaleClass)
+  productsVenta: ProductsSaleClass[];
 }

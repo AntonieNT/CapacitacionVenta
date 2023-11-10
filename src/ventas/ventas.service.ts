@@ -1,22 +1,22 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { CreateVentaDto, ProductosVentaClass } from './dto/create-venta.dto';
-import { VentaEntity } from 'src/_common/entities/ventas.entity';
+import { CreateVentaDto, ProductsSaleClass } from './dto/create-venta.dto';
+import { SalesEntity } from 'src/_common/entities/sales.entity';
 import { v4 as uuidv4 } from 'uuid';
 
-import { Repository, Between, DataSource, ILike, Index } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
-import { ProductoEntity } from 'src/_common/entities/producto.entity';
-import { ProductoInterface } from 'src/productos/interfaces/productos.interface';
-import { VentaInterface } from 'src/ventas/interfaces/venta.interface';
+import { ProductEntity } from 'src/_common/entities/product.entity';
+import { ProductInterface } from 'src/productos/interfaces/products.interface';
+import { VentaClass } from 'src/ventas/interfaces/venta.interface';
 
 @Injectable()
-export class VentasService {
+export class SalesService {
   constructor(
     @Inject('VENTA_REPOSITORY')
-    private ventaRepository: Repository<VentaEntity>,
+    private ventaRepository: Repository<SalesEntity>,
 
-    @Inject('PRODUCTO_REPOSITORY')
-    private productoRepository: Repository<ProductoEntity>,
+    @Inject('product_REPOSITORY')
+    private productRepository: Repository<ProductEntity>,
 
     private dataSource: DataSource,
 
@@ -34,135 +34,148 @@ export class VentasService {
       });
       return this.responseService.succesMessage(venta, 'Venta Encontrada');
     } catch (e) {
-      console.log(e);
+      if (e.code == '22P02') {
+        return this.responseService.errorMessage(
+          'El id no corresponde al fomarto UUID',
+        );
+      } else {
+        console.log(e);
+      }
     } finally {
-      console.log('Encontre ventas');
+      console.log('Encontre sales');
     }
   }
 
   async create(createVentaDto: CreateVentaDto) {
     // ? ------------------------- Start Transaction ------------------------------//
-    console.log(createVentaDto);
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      console.log(createVentaDto.productosVenta);
-      function fusionarProductosDuplicados(
-        productos: ProductosVentaClass[],
-      ): ProductosVentaClass[] {
-        const resultado: ProductosVentaClass[] = [];
+      console.log('Dto');
+      console.log(createVentaDto.productsVenta);
+      function mergeDuplicateProducts(
+        products: ProductsSaleClass[],
+      ): ProductsSaleClass[] {
+        const resultado: ProductsSaleClass[] = [];
 
-        productos.forEach((producto) => {
+        products.forEach((product) => {
           const indiceExistente = resultado.findIndex(
-            (p) => p.clave === producto.clave,
+            (p) => p.code === product.code,
           );
 
           if (indiceExistente !== -1) {
-            // Ya hay un producto con la misma clave, comprobar si el descuento es diferente.
-            if (producto.descuento !== undefined) {
-              if (resultado[indiceExistente].descuento === undefined) {
-                // El producto existente no tiene descuento, asignar el nuevo descuento.
-                resultado[indiceExistente].descuento = producto.descuento;
+            // Ya hay un product con la misma code, comprobar si el descuento es diferente.
+            if (product.discount !== undefined) {
+              if (resultado[indiceExistente].discount === undefined) {
+                // El product existente no tiene descuento, asignar el nuevo descuento.
+                resultado[indiceExistente].discount = product.discount;
               } else if (
-                resultado[indiceExistente].descuento !== producto.descuento
+                resultado[indiceExistente].discount !== product.discount
               ) {
                 // El descuento es diferente, no se puede fusionar, crear un nuevo objeto.
                 throw new Error(
-                  'No se puede realizar por que existen productos duplicados con diferente descuento: ' +
-                    { ...producto }.clave,
+                  'No se puede realizar por que existen products duplicados con diferente descuento: ' +
+                    { ...product }.code,
                 );
-                // resultado.push({ ...producto });
+                // resultado.push({ ...product });
               }
-              // Sumar la cantidad al producto existente.
-              resultado[indiceExistente].cantidadProducto +=
-                producto.cantidadProducto;
+              // Sumar la cantidad al product existente.
+              resultado[indiceExistente].productQuantity +=
+                product.productQuantity;
             } else {
-              // El producto actual no tiene descuento, agregarlo sin fusionar.
-              resultado.push({ ...producto });
+              // El product actual no tiene descuento, agregarlo sin fusionar.
+              resultado.push({ ...product });
             }
           } else {
-            // No se encontró un producto con la misma clave, agregarlo tal cual.
-            resultado.push({ ...producto });
+            // No se encontró un product con la misma code, agregarlo tal cual.
+            resultado.push({ ...product });
           }
         });
         return resultado;
       }
-
-      const productosFusionados = fusionarProductosDuplicados(
-        createVentaDto.productosVenta,
+      const productsFusionados = mergeDuplicateProducts(
+        createVentaDto.productsVenta,
       );
-      console.log(productosFusionados);
-      const productos: any[] = [];
-      const cantidadProductos = productosFusionados.length;
-      let totalVentaProductos = 0;
-
-      for (let index = 0; index < cantidadProductos; index++) {
-        const producto: ProductoInterface =
-          await this.productoRepository.findOne({
-            where: { clave: productosFusionados[index].clave },
-          });
-        if (producto != null) {
-          const stock = producto.stock;
-          const cantidad =
-            createVentaDto.productosVenta[index].cantidadProducto;
+      console.log('fusionados');
+      console.log(productsFusionados);
+      const products: any[] = [];
+      const entitysProducts: any[] = [];
+      const cantidadproducts = productsFusionados.length;
+      let totalVentaproducts = 0;
+      for (let index = 0; index < cantidadproducts; index++) {
+        const product: ProductInterface = await this.productRepository.findOne({
+          where: { code: productsFusionados[index].code },
+        });
+        if (product != null) {
+          const stock = product.stock;
+          console.log(stock);
+          const cantidad = productsFusionados[index].productQuantity;
           if (cantidad > stock) {
             throw new Error(
-              'No se puede realizar la venta del producto: ' +
-                createVentaDto.productosVenta[index].clave +
+              'No se puede realizar la venta del product: ' +
+                productsFusionados[index].code +
                 ' ya que tiene stock de: ' +
                 stock,
             );
           } else {
-            const precioCompra = producto.purchaseCost;
-            let descuentoDTO = createVentaDto.productosVenta[index].descuento;
-            if (descuentoDTO == null || descuentoDTO == undefined) {
-              descuentoDTO = 0;
+            const precioVenta = product.salePrice;
+
+            const precioCompra = product.purchaseCost;
+
+            let descuentoproduct = productsFusionados[index].discount;
+            if (descuentoproduct == null || descuentoproduct == undefined) {
+              descuentoproduct = 0;
             }
-            const descuento = descuentoDTO;
-            const precioVenta = producto.salePrice;
-            const descuentoAplicado = (descuento / 100) * precioVenta;
+
+            const descuentoAplicado = (descuentoproduct / 100) * precioVenta;
             const precioConDescuento = precioVenta - descuentoAplicado;
-            const totalVentaSinDescuento = precioVenta * cantidad;
+
             const totalVentaConDescuento = precioConDescuento * cantidad;
-            const diferenciaVentas =
-              totalVentaSinDescuento - totalVentaConDescuento;
-            const porcentajeUtilidad =
-              (diferenciaVentas / totalVentaSinDescuento) * 100;
-            totalVentaProductos = totalVentaProductos + totalVentaConDescuento;
-            const dataProducto: VentaInterface = {
-              descriptionProducto: producto.description,
-              cantidadProducto: cantidad,
-              precioVenta: precioVenta,
-              totalVenta: totalVentaConDescuento,
-              precioCompra: precioCompra,
-              porcentajeUtilidad: porcentajeUtilidad,
-              descuento: descuento,
+            const totalsalesinDescuento = precioCompra * cantidad;
+
+            const utilidadTotal =
+              totalVentaConDescuento - totalsalesinDescuento;
+            const utilidad = utilidadTotal / totalsalesinDescuento;
+            const UtilidadPorcentual = utilidad * 100;
+            totalVentaproducts = totalVentaproducts + totalVentaConDescuento;
+            const dataproduct: VentaClass = {
+              productDescription: product.description,
+              productQuantity: cantidad,
+              salePrice: precioVenta,
+              totalSale: totalVentaConDescuento,
+              pricePurchase: precioCompra,
+              percentageUtility: UtilidadPorcentual,
+              discount: descuentoproduct,
             };
-            productos[index] = dataProducto;
-            producto.stock = stock - cantidad;
-            await this.productoRepository.save(producto);
+            products[index] = dataproduct;
+            product.stock = stock - cantidad;
+            entitysProducts[index] = product;
           }
         } else {
           throw new Error(
-            'No existe un producto con la clave: ' +
-              createVentaDto.productosVenta[index].clave,
+            'No existe un product con la code: ' +
+              createVentaDto.productsVenta[index].code,
           );
         }
       }
-      const cadenaJSON = JSON.stringify(productos);
+      const cadenaJSON = JSON.stringify(products);
       const generatedId = this.createUUID();
-      const ventaToInsert: VentaEntity = {
+      const ventaToInsert: SalesEntity = {
         id: generatedId,
-        cantidadProductos: cantidadProductos,
-        ventaTotal: totalVentaProductos,
-        productosVendidos: cadenaJSON,
+        quantityProducts: cantidadproducts,
+        totalSale: totalVentaproducts,
+        productsSold: cadenaJSON,
       };
       // ? ------------------------- Transaction Complete ------------------------------//
-      await queryRunner.manager.save(VentaEntity, ventaToInsert);
+      entitysProducts.forEach((product) => console.log(product));
+      entitysProducts.forEach(
+        async (product) => await this.productRepository.save(product),
+      );
+      await queryRunner.manager.save(SalesEntity, ventaToInsert);
       await queryRunner.commitTransaction();
       // ? ------------------------- DELETE Dto ------------------------------//
-      delete createVentaDto.productosVenta;
+      delete createVentaDto.productsVenta;
       // ? ------------------------- Return Object ------------------------------//
       return this.responseService.succesMessage(
         { generatedId },
@@ -170,32 +183,27 @@ export class VentasService {
       );
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      if (error.message.startsWith('No existe un producto con la clave: ')) {
+      if (error.message.startsWith('No existe un product con la code: ')) {
         return this.responseService.errorMessage(error.message);
-      } else {
-        if (
-          error.message.startsWith(
-            'No se puede realizar la venta del producto: ',
-          )
-        ) {
-          return this.responseService.errorMessage(error.message);
-        } else {
-          if (error.code == '22P02') {
-            return this.responseService.errorMessage(
-              'El id no corresponde al fomarto UUID',
-            );
-          }
-          if (
-            error.message.startsWith(
-              'No se puede realizar por que existen productos duplicados con diferente descuento: ',
-            )
-          ) {
-            return this.responseService.errorMessage(error.message);
-          } else {
-            console.log(error);
-          }
-        }
       }
+      if (
+        error.message.startsWith('No se puede realizar la venta del product: ')
+      ) {
+        return this.responseService.errorMessage(error.message);
+      }
+      if (error.code == '22P02') {
+        return this.responseService.errorMessage(
+          'El id no corresponde al fomarto UUID',
+        );
+      }
+      if (
+        error.message.startsWith(
+          'No se puede realizar por que existen products duplicados con diferente descuento: ',
+        )
+      ) {
+        return this.responseService.errorMessage(error.message);
+      }
+      console.log(error);
     } finally {
       await queryRunner.release();
     }

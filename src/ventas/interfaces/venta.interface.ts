@@ -1,11 +1,11 @@
-export interface VentaInterface {
-  descriptionProducto: string;
-  cantidadProducto: number;
-  precioVenta: number;
-  totalVenta: number;
-  precioCompra: number;
-  porcentajeUtilidad: number;
-  descuento: number;
+export class VentaClass {
+  productDescription: string;
+  productQuantity: number;
+  salePrice: number;
+  totalSale: number;
+  pricePurchase: number;
+  percentageUtility: number;
+  discount: number;
 }
 
 export interface FindOneVentaInterface {
@@ -17,5 +17,5 @@ export interface ResponseVentaInterface {
   code: number;
   message: string;
   success: boolean;
-  entity: VentaInterface | null;
+  entity: VentaClass | null;
 }

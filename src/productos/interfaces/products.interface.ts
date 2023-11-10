@@ -1,24 +1,24 @@
-export interface ProductoInterface {
+export interface ProductInterface {
   id: string;
   name: string;
-  clave: string;
+  code: string;
   description: string;
   salePrice: number;
   purchaseCost: number;
   stock: number;
   active: boolean;
 }
-export interface FindOneProductoInterface {
+export interface FindOneProductInterface {
   id: string;
-  clave: string;
+  code: string;
 }
-export interface DeleteProductoInterface {
+export interface DeleteProductInterface {
   id: string;
   active: boolean;
 }
-export interface ResponseproductoInterface {
+export interface ResponseProductInterface {
   code: number;
   message: string;
   success: boolean;
-  entity: ProductoInterface | null;
+  entity: ProductInterface | null;
 }

@@ -1,13 +1,13 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
-@Entity({ name: 'producto' })
-export class ProductoEntity {
+@Entity({ name: 'Product' })
+export class ProductEntity {
   @PrimaryColumn({ type: 'uuid' })
   id: string;
 
   // @Column({ nullable: true, unique: true })
   @Column({ unique: true })
-  clave: string;
+  code: string;
 
   @Column()
   name: string;
@@ -26,4 +26,8 @@ export class ProductoEntity {
 
   @Column({ default: true })
   active: boolean;
+
+  // @ManyToOne(() => Venta, venta => venta.products)
+  // @JoinColumn({ name: 'ventaId' })
+  // venta: Venta;
 }

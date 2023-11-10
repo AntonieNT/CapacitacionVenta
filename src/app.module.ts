@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { VentasModule } from './ventas/ventas.module';
-import { ProductosModule } from './productos/productos.module';
+import { SalesModule } from './ventas/ventas.module';
+import { ProductsModule } from './productos/products.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 
@@ -12,8 +12,8 @@ import { ConfigModule } from '@nestjs/config';
       envFilePath: ['.env'],
       isGlobal: true,
     }),
-    VentasModule,
-    ProductosModule,
+    SalesModule,
+    ProductsModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -22,7 +22,7 @@ import { ConfigModule } from '@nestjs/config';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       entities: ['./**/*.entity.js'],
-      synchronize: false,
+      synchronize: true,
     }),
   ],
   controllers: [AppController],
