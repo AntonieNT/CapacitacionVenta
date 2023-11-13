@@ -1,7 +1,8 @@
+import { ProductInterface } from 'src/productos/interfaces/products.interface';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'Product' })
-export class ProductEntity {
+export class ProductEntity implements ProductInterface{
   @PrimaryColumn({ type: 'uuid' })
   id: string;
 

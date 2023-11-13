@@ -100,7 +100,7 @@ export class SalesService {
       console.log('fusionados');
       console.log(productsFusionados);
       const products: any[] = [];
-      const entitysProducts: any[] = [];
+      // const entitysProducts: any[] = [];
       const cantidadproducts = productsFusionados.length;
       let totalVentaproducts = 0;
       for (let index = 0; index < cantidadproducts; index++) {
@@ -150,7 +150,9 @@ export class SalesService {
             };
             products[index] = dataproduct;
             product.stock = stock - cantidad;
-            entitysProducts[index] = product;
+            await queryRunner.manager.save(ProductEntity, product);
+
+            // entitysProducts[index] = product;
           }
         } else {
           throw new Error(
@@ -168,10 +170,10 @@ export class SalesService {
         productsSold: cadenaJSON,
       };
       // ? ------------------------- Transaction Complete ------------------------------//
-      entitysProducts.forEach((product) => console.log(product));
-      entitysProducts.forEach(
-        async (product) => await this.productRepository.save(product),
-      );
+      // entitysProducts.forEach((product) => console.log(product));
+      // entitysProducts.forEach(
+      //   async (product) => await this.productRepository.save(product),
+      // );
       await queryRunner.manager.save(SalesEntity, ventaToInsert);
       await queryRunner.commitTransaction();
       // ? ------------------------- DELETE Dto ------------------------------//
