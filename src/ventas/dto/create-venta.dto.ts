@@ -34,5 +34,5 @@ export class CreateVentaDto {
   @IsArray({ message: 'Debe de ser un array de products' })
   @ValidateNested({ each: true })
   @Type(() => ProductsSaleClass)
-  productsVenta: ProductsSaleClass[];
+  productsSale: ProductsSaleClass[];
 }

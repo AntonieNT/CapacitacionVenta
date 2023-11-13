@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateproductDto } from './dto/create-product.dto';
 import { UpdateproductDto } from './dto/update-product.dto';
 import { ProductEntity } from 'src/_common/entities/product.entity';
@@ -13,16 +13,19 @@ import {
   ProductInterface,
   ResponseProductInterface,
 } from './interfaces/products.interface';
+import { PersonalizedResponseService } from 'src/_common/personalized-response.service';
 
 @Injectable()
 export class ProductsService {
   constructor(
-    @Inject('product_REPOSITORY')
+    @Inject('PRODUCT_REPOSITORY')
     private productRepository: Repository<ProductEntity>,
 
     private dataSource: DataSource,
 
     private responseService: ResponseService,
+
+    private personalizedResponseService: PersonalizedResponseService,
   ) {}
 
   createUUID() {
@@ -40,7 +43,10 @@ export class ProductsService {
         });
       console.log(product);
       if (product != null) {
-        throw new Error('Ya existe un product con la code: ' + product.code);
+        throw new HttpException(
+          `Ya existe un product con la clave: ${product.code}`,
+          HttpStatus.CONFLICT,
+        );
       } else {
         const generatedId = this.createUUID();
         const objToSave: ProductEntity = {
@@ -66,14 +72,12 @@ export class ProductsService {
         delete createproductDto.stock;
 
         return this.responseService.succesInfo(
-          'Se registro el product con id: ' + generatedId,
+          'Se registro el producto con id: ' + generatedId,
         );
       }
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      if (error.message.startsWith('Ya existe un product con la code: ')) {
-        return this.responseService.errorMessage(error.message);
-      }
+      return this.personalizedResponseService.catch(error);
     } finally {
       await queryRunner.release();
     }
@@ -85,12 +89,12 @@ export class ProductsService {
       });
       return this.responseService.succesMessage(
         product,
-        'products Encontrados',
+        'Productos Encontrados',
       );
     } catch (e) {
       console.log(e);
     } finally {
-      console.log('Encontre products');
+      console.log('FoundProducts');
     }
   }
   async findOne(id: string): Promise<ResponseProductInterface> {
@@ -126,7 +130,7 @@ export class ProductsService {
         console.log(e);
       }
     } finally {
-      console.log('Encontre products');
+      console.log('Found Products');
     }
   }
   async remove(id: string) {
@@ -216,7 +220,7 @@ export class ProductsService {
     } catch (e) {
       console.log(e);
     } finally {
-      console.log('Encontre products');
+      console.log('Found Products');
     }
   }
   update(id: number, updateproductDto: UpdateproductDto) {

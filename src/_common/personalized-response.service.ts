@@ -20,7 +20,14 @@ export class PersonalizedResponseService {
           success: false,
           entity: null,
         };
-
+        break;
+      case 409:
+        return {
+          code: 409,
+          message: error.message,
+          success: false,
+          entity: null,
+        };
         break;
       default:
         switch (error.code) {

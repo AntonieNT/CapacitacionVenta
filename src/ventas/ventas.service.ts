@@ -1,28 +1,21 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  HttpStatus,
-  HttpException,
-} from '@nestjs/common';
+import { Injectable, Inject, HttpStatus, HttpException } from '@nestjs/common';
 import { CreateVentaDto, ProductsSaleClass } from './dto/create-venta.dto';
 import { SalesEntity } from 'src/_common/entities/sales.entity';
 import { v4 as uuidv4 } from 'uuid';
 
-import { Repository, DataSource, Any } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
 import { ProductEntity } from 'src/_common/entities/product.entity';
 import { ProductInterface } from 'src/productos/interfaces/products.interface';
 import { VentaClass } from 'src/ventas/interfaces/venta.interface';
-import { HttpErrorByCode } from '@nestjs/common/utils/http-error-by-code.util';
 import { PersonalizedResponseService } from 'src/_common/personalized-response.service';
 @Injectable()
 export class SalesService {
   constructor(
-    @Inject('VENTA_REPOSITORY')
-    private ventaRepository: Repository<SalesEntity>,
+    @Inject('SALES_REPOSITORY')
+    private saleRepository: Repository<SalesEntity>,
 
-    @Inject('product_REPOSITORY')
+    @Inject('PRODUCT_REPOSITORY')
     private productRepository: Repository<ProductEntity>,
 
     private dataSource: DataSource,
@@ -30,7 +23,6 @@ export class SalesService {
     private responseService: ResponseService,
 
     private personalizedResponseService: PersonalizedResponseService,
-
   ) {}
 
   createUUID() {
@@ -39,20 +31,14 @@ export class SalesService {
 
   async findOne(id: string) {
     try {
-      const venta = await this.ventaRepository.find({
+      const sale = await this.saleRepository.find({
         where: { id: id },
       });
-      return this.responseService.succesMessage(venta, 'Venta Encontrada');
+      return this.responseService.succesMessage(sale, 'Venta Encontrada');
     } catch (e) {
-      if (e.code == '22P02') {
-        return this.responseService.errorMessage(
-          'El id no corresponde al fomarto UUID',
-        );
-      } else {
-        console.log(e);
-      }
+      return this.personalizedResponseService.catch(e);
     } finally {
-      console.log('Encontre sales');
+      console.log('FoundSales');
     }
   }
 
@@ -63,133 +49,114 @@ export class SalesService {
     await queryRunner.startTransaction();
     try {
       console.log('Dto');
-      console.log(createVentaDto.productsVenta);
+      console.log(createVentaDto.productsSale);
       function mergeDuplicateProducts(
         products: ProductsSaleClass[],
       ): ProductsSaleClass[] {
-        const resultado: ProductsSaleClass[] = [];
-
+        const result: ProductsSaleClass[] = [];
         products.forEach((product) => {
-          const indiceExistente = resultado.findIndex(
-            (p) => p.code === product.code,
-          );
-
-          if (indiceExistente !== -1) {
-            // Ya hay un product con la misma code, comprobar si el descuento es diferente.
+          const index = result.findIndex((p) => p.code === product.code);
+          if (index !== -1) {
+            // There is already a product with the same code, check if the discount is different.
             if (product.discount !== undefined) {
-              if (resultado[indiceExistente].discount === undefined) {
-                // El product existente no tiene descuento, asignar el nuevo descuento.
-                resultado[indiceExistente].discount = product.discount;
-              } else if (
-                resultado[indiceExistente].discount !== product.discount
-              ) {
-                // El descuento es diferente, no se puede fusionar, crear un nuevo objeto.
+              if (result[index].discount === undefined) {
+                // The existing product does not have a discount, assign the new discount..
+                result[index].discount = product.discount;
+              } else if (result[index].discount !== product.discount) {
+                // Discount is different, cannot be merged, create a new object.
                 throw new HttpException(
                   `No se puede realizar por que el producto ${
                     { ...product }.code
                   } tiene diferente descuento.`,
                   HttpStatus.UNAUTHORIZED,
                 );
-                // resultado.push({ ...product });
+                // result.push({ ...product });
               }
-              // Sumar la cantidad al product existente.
-              resultado[indiceExistente].productQuantity +=
-                product.productQuantity;
+              // Add the quantity to the existing product.
+              result[index].productQuantity += product.productQuantity;
             } else {
-              // El product actual no tiene descuento, agregarlo sin fusionar.
-              resultado.push({ ...product });
+              // Add the quantity to the existing product.
+              result.push({ ...product });
             }
           } else {
-            // No se encontró un product con la misma code, agregarlo tal cual.
-            resultado.push({ ...product });
+            // A product with the same code was not found, add it as is.
+            result.push({ ...product });
           }
         });
-        return resultado;
+        return result;
       }
-      const productsFusionados = mergeDuplicateProducts(
-        createVentaDto.productsVenta,
+      const productsMerged = mergeDuplicateProducts(
+        createVentaDto.productsSale,
       );
-      console.log('fusionados');
-      console.log(productsFusionados);
+      console.log('merged');
+      console.log(productsMerged);
       const products: any[] = [];
       // const entitysProducts: any[] = [];
-      const cantidadproducts = productsFusionados.length;
-      let cantidadProductos = 0;
-      let totalVentaproducts = 0;
-      for (let index = 0; index < cantidadproducts; index++) {
+      const quantityObjects = productsMerged.length;
+      let quantityProducts = 0;
+      let totalSaleProducts = 0;
+      for (let index = 0; index < quantityObjects; index++) {
         const product: ProductInterface = await this.productRepository.findOne({
-          where: { code: productsFusionados[index].code },
+          where: { code: productsMerged[index].code },
         });
         if (product != null) {
           const stock = product.stock;
           console.log(stock);
-          const cantidad = productsFusionados[index].productQuantity;
-          cantidadProductos = cantidadProductos + cantidad;
-          if (cantidad > stock) {
+          const quantity = productsMerged[index].productQuantity;
+          quantityProducts = quantityProducts + quantity;
+          if (quantity > stock) {
             throw new HttpException(
-              `No se puede realizar la venta del producto: ${productsFusionados[index].code} ya que tiene stock de: ${stock}`,
+              `No se puede realizar la venta del producto: ${productsMerged[index].code} ya que tiene stock de: ${stock}`,
               HttpStatus.UNAUTHORIZED,
             );
           } else {
-            const precioVenta = product.salePrice;
-
-            const precioCompra = product.purchaseCost;
-
-            let descuentoproduct = productsFusionados[index].discount;
-            if (descuentoproduct == null || descuentoproduct == undefined) {
-              descuentoproduct = 0;
+            const salePrice = product.salePrice;
+            const pricePurchase = product.purchaseCost;
+            let discountProduct = productsMerged[index].discount;
+            if (discountProduct == null || discountProduct == undefined) {
+              discountProduct = 0;
             }
-
-            const descuentoAplicado = (descuentoproduct / 100) * precioVenta;
-            const precioConDescuento = precioVenta - descuentoAplicado;
-
-            const totalVentaConDescuento = precioConDescuento * cantidad;
-            const totalsalesinDescuento = precioCompra * cantidad;
-
-            const utilidadTotal =
-              totalVentaConDescuento - totalsalesinDescuento;
-            const utilidad = utilidadTotal / totalsalesinDescuento;
-            const UtilidadPorcentual = utilidad * 100;
-            totalVentaproducts = totalVentaproducts + totalVentaConDescuento;
+            const discountApplied = (discountProduct / 100) * salePrice;
+            const priceWithDiscount = salePrice - discountApplied;
+            const totalSaleWithDiscount = priceWithDiscount * quantity;
+            const totalSalesNoDiscount = pricePurchase * quantity;
+            const utilityTotal = totalSaleWithDiscount - totalSalesNoDiscount;
+            const utility = utilityTotal / totalSalesNoDiscount;
+            const utilityPorcentual = utility * 100;
+            totalSaleProducts = totalSaleProducts + totalSaleWithDiscount;
             const dataproduct: VentaClass = {
               productDescription: product.description,
-              productQuantity: cantidad,
-              salePrice: precioVenta,
-              totalSale: totalVentaConDescuento,
-              pricePurchase: precioCompra,
-              percentageUtility: UtilidadPorcentual,
-              discount: descuentoproduct,
+              productQuantity: quantity,
+              salePrice: salePrice,
+              totalSale: totalSaleWithDiscount,
+              pricePurchase: pricePurchase,
+              percentageUtility: utilityPorcentual,
+              discount: discountProduct,
             };
             products[index] = dataproduct;
-            product.stock = stock - cantidad;
+            product.stock = stock - quantity;
             await queryRunner.manager.save(ProductEntity, product);
-
-            // entitysProducts[index] = product;
           }
         } else {
           throw new HttpException(
-            `Producto con clave ${createVentaDto.productsVenta[index].code} no encontrado.`,
+            `Producto con clave ${productsMerged[index].code} no encontrado.`,
             HttpStatus.NOT_FOUND,
           );
         }
       }
-      const cadenaJSON = JSON.stringify(products);
+      const JsonString = JSON.stringify(products);
       const generatedId = this.createUUID();
-      const ventaToInsert: SalesEntity = {
+      const saleToInsert: SalesEntity = {
         id: generatedId,
-        quantityProducts: cantidadProductos,
-        totalSale: totalVentaproducts,
-        productsSold: cadenaJSON,
+        quantityProducts: quantityProducts,
+        totalSale: totalSaleProducts,
+        productsSold: JsonString,
       };
       // ? ------------------------- Transaction Complete ------------------------------//
-      // entitysProducts.forEach((product) => console.log(product));
-      // entitysProducts.forEach(
-      //   async (product) => await this.productRepository.save(product),
-      // );
-      await queryRunner.manager.save(SalesEntity, ventaToInsert);
+      await queryRunner.manager.save(SalesEntity, saleToInsert);
       await queryRunner.commitTransaction();
       // ? ------------------------- DELETE Dto ------------------------------//
-      delete createVentaDto.productsVenta;
+      delete createVentaDto.productsSale;
       // ? ------------------------- Return Object ------------------------------//
       return this.responseService.succesMessage(
         { generatedId },

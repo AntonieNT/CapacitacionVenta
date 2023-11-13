@@ -3,13 +3,13 @@ import { ProductEntity } from './entities/product.entity';
 import { SalesEntity } from './entities/sales.entity';
 export const globalProviders = [
   {
-    provide: 'product_REPOSITORY',
+    provide: 'PRODUCT_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
       dataSource.getRepository(ProductEntity),
     inject: ['DATA_SOURCE'],
   },
   {
-    provide: 'VENTA_REPOSITORY',
+    provide: 'SALES_REPOSITORY',
     useFactory: (dataSource: DataSource) =>
       dataSource.getRepository(SalesEntity),
     inject: ['DATA_SOURCE'],
