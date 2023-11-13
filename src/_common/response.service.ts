@@ -27,6 +27,15 @@ export class ResponseService {
       entity: null,
     };
   }
+
+  public notFound(message: string) {
+    return {
+      code: 404,
+      message: message,
+      success: true,
+      entity: null,
+    };
+  }
 }
 
 export class globalResponse {

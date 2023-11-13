@@ -1,14 +1,21 @@
-import { Injectable, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  HttpStatus,
+  HttpException,
+} from '@nestjs/common';
 import { CreateVentaDto, ProductsSaleClass } from './dto/create-venta.dto';
 import { SalesEntity } from 'src/_common/entities/sales.entity';
 import { v4 as uuidv4 } from 'uuid';
 
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Any } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
 import { ProductEntity } from 'src/_common/entities/product.entity';
 import { ProductInterface } from 'src/productos/interfaces/products.interface';
 import { VentaClass } from 'src/ventas/interfaces/venta.interface';
-
+import { HttpErrorByCode } from '@nestjs/common/utils/http-error-by-code.util';
+import { PersonalizedResponseService } from 'src/_common/personalized-response.service';
 @Injectable()
 export class SalesService {
   constructor(
@@ -21,6 +28,9 @@ export class SalesService {
     private dataSource: DataSource,
 
     private responseService: ResponseService,
+
+    private personalizedResponseService: PersonalizedResponseService,
+
   ) {}
 
   createUUID() {
@@ -74,9 +84,11 @@ export class SalesService {
                 resultado[indiceExistente].discount !== product.discount
               ) {
                 // El descuento es diferente, no se puede fusionar, crear un nuevo objeto.
-                throw new Error(
-                  'No se puede realizar por que existen products duplicados con diferente descuento: ' +
-                    { ...product }.code,
+                throw new HttpException(
+                  `No se puede realizar por que el producto ${
+                    { ...product }.code
+                  } tiene diferente descuento.`,
+                  HttpStatus.UNAUTHORIZED,
                 );
                 // resultado.push({ ...product });
               }
@@ -102,6 +114,7 @@ export class SalesService {
       const products: any[] = [];
       // const entitysProducts: any[] = [];
       const cantidadproducts = productsFusionados.length;
+      let cantidadProductos = 0;
       let totalVentaproducts = 0;
       for (let index = 0; index < cantidadproducts; index++) {
         const product: ProductInterface = await this.productRepository.findOne({
@@ -111,12 +124,11 @@ export class SalesService {
           const stock = product.stock;
           console.log(stock);
           const cantidad = productsFusionados[index].productQuantity;
+          cantidadProductos = cantidadProductos + cantidad;
           if (cantidad > stock) {
-            throw new Error(
-              'No se puede realizar la venta del product: ' +
-                productsFusionados[index].code +
-                ' ya que tiene stock de: ' +
-                stock,
+            throw new HttpException(
+              `No se puede realizar la venta del producto: ${productsFusionados[index].code} ya que tiene stock de: ${stock}`,
+              HttpStatus.UNAUTHORIZED,
             );
           } else {
             const precioVenta = product.salePrice;
@@ -155,9 +167,9 @@ export class SalesService {
             // entitysProducts[index] = product;
           }
         } else {
-          throw new Error(
-            'No existe un product con la code: ' +
-              createVentaDto.productsVenta[index].code,
+          throw new HttpException(
+            `Producto con clave ${createVentaDto.productsVenta[index].code} no encontrado.`,
+            HttpStatus.NOT_FOUND,
           );
         }
       }
@@ -165,7 +177,7 @@ export class SalesService {
       const generatedId = this.createUUID();
       const ventaToInsert: SalesEntity = {
         id: generatedId,
-        quantityProducts: cantidadproducts,
+        quantityProducts: cantidadProductos,
         totalSale: totalVentaproducts,
         productsSold: cadenaJSON,
       };
@@ -185,27 +197,7 @@ export class SalesService {
       );
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      if (error.message.startsWith('No existe un product con la code: ')) {
-        return this.responseService.errorMessage(error.message);
-      }
-      if (
-        error.message.startsWith('No se puede realizar la venta del product: ')
-      ) {
-        return this.responseService.errorMessage(error.message);
-      }
-      if (error.code == '22P02') {
-        return this.responseService.errorMessage(
-          'El id no corresponde al fomarto UUID',
-        );
-      }
-      if (
-        error.message.startsWith(
-          'No se puede realizar por que existen products duplicados con diferente descuento: ',
-        )
-      ) {
-        return this.responseService.errorMessage(error.message);
-      }
-      console.log(error);
+      return this.personalizedResponseService.catch(error);
     } finally {
       await queryRunner.release();
     }
