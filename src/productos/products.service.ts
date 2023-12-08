@@ -4,7 +4,6 @@ import { UpdateproductDto } from './dto/update-product.dto';
 import { ProductEntity } from 'src/_common/entities/product.entity';
 import { FindproductDto } from './dto/find-product.dto';
 import { v4 as uuidv4 } from 'uuid';
-
 import { Repository, Between, DataSource, ILike } from 'typeorm';
 import { ResponseService } from 'src/_common/response.service';
 import {
@@ -26,6 +25,7 @@ export class ProductsService {
     private responseService: ResponseService,
 
     private personalizedResponseService: PersonalizedResponseService,
+
   ) {}
 
   createUUID() {
@@ -71,8 +71,9 @@ export class ProductsService {
         delete createproductDto.purchaseCost;
         delete createproductDto.stock;
 
-        return this.responseService.succesInfo(
-          'Se registro el producto con id: ' + generatedId,
+        return this.responseService.succesMessage(
+          objToSave,
+          'Se registro el producto: ',
         );
       }
     } catch (error) {
@@ -92,7 +93,7 @@ export class ProductsService {
         'Productos Encontrados',
       );
     } catch (e) {
-      console.log(e);
+      return this.personalizedResponseService.catch(e);
     } finally {
       console.log('FoundProducts');
     }
@@ -122,13 +123,7 @@ export class ProductsService {
         'product Encontrado',
       );
     } catch (e) {
-      if (e.code == '22P02') {
-        return this.responseService.errorMessage(
-          'El id no corresponde al fomarto UUID',
-        );
-      } else {
-        console.log(e);
-      }
+      return this.personalizedResponseService.catch(e);
     } finally {
       console.log('Found Products');
     }
@@ -218,7 +213,7 @@ export class ProductsService {
       const entity = { data, total, page };
       return this.responseService.succesMessage(entity, 'products Encontrados');
     } catch (e) {
-      console.log(e);
+      return this.personalizedResponseService.catch(e);
     } finally {
       console.log('Found Products');
     }

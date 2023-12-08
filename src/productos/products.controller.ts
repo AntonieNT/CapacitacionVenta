@@ -10,7 +10,7 @@ import {
 import { ProductsService } from './products.service';
 // import { CreateproductDto } from './dto/create-product.dto';
 import { UpdateproductDto } from './dto/update-product.dto';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiAcceptedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { globalResponse } from 'src/_common/response.service';
 import { FindproductDto } from './dto/find-product.dto';
 import { CreateproductDto } from './dto/create-product.dto';
@@ -18,7 +18,6 @@ import { CreateproductDto } from './dto/create-product.dto';
 @Controller('products')
 export class productsController {
   constructor(private readonly productsService: ProductsService) {}
-
   @Post()
   create(@Body() createproductDto: CreateproductDto) {
     return this.productsService.create(createproductDto);
@@ -51,6 +50,7 @@ export class productsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);
+    console.log('termine de hacer esto');
   }
 
   @Patch(':id')
